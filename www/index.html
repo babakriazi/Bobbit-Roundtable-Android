@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Bobbit Roundtable</title>
+<style>
+:root{
+  --bg:#1a1d24; --panel:#242832; --panel2:#2b3040; --accent:#3b82f6; --accent2:#2563eb;
+  --text:#e5e7eb; --muted:#9ca3af; --green:#2ecc71; --red:#e74c3c; --orange:#f59e0b;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;}
+body{background:var(--bg);color:var(--text);font-family:Tahoma,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;}
+#app{display:flex;flex-direction:column;height:100%;}
+header{background:var(--panel);padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+header h1{font-size:16px;margin:0;font-weight:bold;}
+header .tokens{margin-inline-start:auto;font-size:12px;color:var(--muted);}
+nav{display:flex;background:var(--panel);border-top:1px solid #333;}
+nav button{flex:1;padding:12px 4px;background:none;border:none;color:var(--muted);font-size:14px;font-family:inherit;cursor:pointer;border-bottom:3px solid transparent;}
+nav button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:bold;}
+main{flex:1;overflow:hidden;display:flex;}
+.tab{display:none;flex:1;flex-direction:column;overflow:hidden;padding:12px;gap:10px;}
+.tab.active{display:flex;}
+.display{flex:1;background:var(--panel);border-radius:10px;padding:12px;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word;line-height:1.9;font-size:14px;}
+.entry-row{display:flex;gap:8px;align-items:stretch;}
+input[type=text],input[type=password]{flex:1;background:var(--panel2);border:1px solid #3a4152;border-radius:8px;color:var(--text);padding:12px;font-size:15px;font-family:inherit;min-width:0;}
+input:focus{outline:1px solid var(--accent);}
+button.btn{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:10px 16px;font-size:14px;font-family:inherit;cursor:pointer;white-space:nowrap;}
+button.btn:active{background:var(--accent2);}
+button.btn.danger{background:#8B0000;}
+button.btn.small{padding:6px 10px;font-size:12px;}
+select{background:var(--panel2);color:var(--text);border:1px solid #3a4152;border-radius:8px;padding:10px;font-size:14px;max-width:48%;}
+.card{background:var(--panel);border-radius:10px;padding:12px;}
+.card h3{margin:0 0 10px;font-size:14px;color:var(--accent);}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+.row label{font-size:13px;color:var(--muted);min-width:70px;}
+.row input{flex:1;}
+.msg-user{color:#93c5fd;margin-bottom:10px;}
+.msg-ai{margin-bottom:14px;}
+.model-pill{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border-radius:20px;padding:6px 12px;margin:4px 4px 0 0;font-size:13px;}
+.model-pill .del{color:var(--red);cursor:pointer;font-weight:bold;margin-inline-start:4px;}
+.status-ok{color:var(--green)} .status-fail{color:var(--red)} .status-unknown{color:var(--muted)}
+#confParticipants{min-height:44px;padding:6px;}
+.hint{font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🗣️ Bobbit Roundtable</h1>
+    <span class="tokens" id="tokenCount">Tokens: 0</span>
+  </header>
+  <main>
+    <!-- CHATBOT -->
+    <section class="tab active" id="tab-chat">
+      <div class="row" style="margin:0">
+        <select id="chatModel"></select>
+      </div>
+      <div class="display" id="chatDisplay">مدل را انتخاب کنید و پیام بفرستید...</div>
+      <div class="entry-row">
+        <input type="text" id="chatEntry" placeholder="پیام خود را بنویسید...">
+        <button class="btn" id="chatSend">Send</button>
+      </div>
+    </section>
+    <!-- CONFERENCE -->
+    <section class="tab" id="tab-conf">
+      <div class="card">
+        <div class="row" style="margin-bottom:6px">
+          <select id="confModel"></select>
+          <input type="text" id="confRole" placeholder="نقش مدل (مثلاً منتقد)">
+          <button class="btn" id="confAdd">Add</button>
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <input type="text" id="userRole" placeholder="نقش شما (مثلاً مدیر)">
+        </div>
+        <div id="confParticipants"></div>
+        <div class="row" style="margin:8px 0 0">
+          <button class="btn small" id="confFetch">Fetch Models</button>
+          <button class="btn small danger" id="confClear">Clear All</button>
+        </div>
+      </div>
+      <div class="display" id="confDisplay">موضوع کنفرانس را ارسال کنید...</div>
+      <div class="entry-row">
+        <input type="text" id="confEntry" placeholder="موضوع یا پیام خود را بنویسید...">
+        <button class="btn" id="confSend">Send</button>
+      </div>
+    </section>
+    <!-- SETTINGS -->
+    <section class="tab" id="tab-set">
+      <div class="card">
+        <h3>API Configuration</h3>
+        <div class="row"><label>API Key</label><input type="password" id="setKey" placeholder="sk-..."></div>
+        <div class="row"><label>Base URL</label><input type="text" id="setUrl" value="https://llm.simplellms.com/v1"></div>
+        <div class="row" style="margin:0">
+          <button class="btn" id="setSave">Save Settings</button>
+          <button class="btn" id="setFetch">Fetch Models</button>
+          <button class="btn" id="setTest">Test All</button>
+          <button class="btn danger" id="setDelFail">Delete Failed</button>
+        </div>
+      </div>
+      <div class="card" style="flex:1;overflow-y:auto">
+        <h3>Models (Green=OK / Red=Failed)</h3>
+        <div id="modelList"></div>
+      </div>
+    </section>
+  </main>
+  <nav>
+    <button class="active" data-tab="tab-chat">💬 Chatbot</button>
+    <button data-tab="tab-conf">🗣️ Conference</button>
+    <button data-tab="tab-set">⚙️ Settings</button>
+  </nav>
+</div>
+<script>
+// ============================ Bobbit Roundtable Web (Capacitor) ============================
+var DEFAULT_MODEL_LIST = [
+  "claude-haiku-4-5-20251001","claude-opus-4-8","claude-opus-5","claude-sonnet-4-6","claude-sonnet-5",
+  "deepseek-v4-flash-0731","deepseek-v4-pro-0813","deepseek-v4.1-flash",
+  "grok-4.6","glm-5.2","gpt-5.6-luna",
+  "Qwen3-Coder-30B-A3B-Instruct","Qwen3-235B-A22B","Qwen3-Max","Qwen3-Next-80B-A3B-Instruct","Qwen3-Vl-Instruct",
+  "OpenAI/gpt-oss-120b","Kode-14b","Kode-32b"
+];
+var DEFAULT_PROMPT = "You are participating in a multi-agent conference.\n" +
+"The user will provide a topic or messages. Models speak in sequential order based on the participant list.\n\n" +
+"IMPORTANT RULES:\n" +
+"1. When it is your turn, carefully read the full context of previous messages.\n" +
+"2. Respond ONLY according to your assigned role. Keep responses concise, focused, and professional.\n" +
+"3. Prefer plain text. Avoid markdown formatting unless absolutely necessary.\n" +
+"4. DIRECT QUESTIONS / ADDRESSING:\n" +
+"   - If the most recent message clearly asks a question to ONE specific participant by their exact role name, only that participant answers; all others must output exactly: [SKIP]\n" +
+"   - If the mentioned name does NOT match any participant, respond normally and briefly note no such participant is present.\n" +
+"5. If no one is specifically addressed, everyone speaks in order as usual.\n" +
+"6. Always stay in character. Do not invent participants that are not listed.\n\n" +
+"Respond in the same language the conversation is currently using (Persian or English).";
+
+var state = {
+  apiKey: "", baseUrl: "https://llm.simplellms.com/v1",
+  modelList: DEFAULT_MODEL_LIST.slice(),
+  modelStatus: {},
+  chatModel: "grok-4.6",
+  conferenceModels: [],   // {model, role}
+  userRole: "User",
+  chatHistory: [],
+  confContext: "",
+  totalTokens: 0,
+  busy: false
+};
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+// ---------- persistence ----------
+function save(){
+  try{ localStorage.setItem("bobbit_cfg", JSON.stringify({
+    apiKey: state.apiKey, baseUrl: state.baseUrl, modelList: state.modelList,
+    modelStatus: state.modelStatus, chatModel: state.chatModel,
+    conferenceModels: state.conferenceModels, userRole: state.userRole
+  })); }catch(e){}
+}
+function load(){
+  try{
+    var d = JSON.parse(localStorage.getItem("bobbit_cfg")||"{}");
+    if(d.apiKey) state.apiKey = d.apiKey;
+    if(d.baseUrl) state.baseUrl = d.baseUrl;
+    if(d.modelList && d.modelList.length) state.modelList = d.modelList;
+    if(d.modelStatus) state.modelStatus = d.modelStatus;
+    if(d.chatModel) state.chatModel = d.chatModel;
+    if(d.conferenceModels) state.conferenceModels = d.conferenceModels;
+    if(d.userRole) state.userRole = d.userRole;
+  }catch(e){}
+}
+
+// ---------- UI helpers ----------
+function setTokens(){ $("tokenCount").textContent = "Tokens: " + state.totalTokens; }
+function fillSelect(sel, current){
+  sel.innerHTML = "";
+  state.modelList.forEach(function(m){
+    var o = document.createElement("option"); o.value = m; o.textContent = m;
+    if(m === current) o.selected = true; sel.appendChild(o);
+  });
+}
+function refreshModelsUI(){
+  fillSelect($("chatModel"), state.chatModel);
+  fillSelect($("confModel"), state.modelList[0]);
+  var box = $("modelList"); box.innerHTML = "";
+  state.modelList.forEach(function(m){
+    var st = state.modelStatus[m] || "unknown";
+    var pill = document.createElement("div"); pill.className = "model-pill";
+    var dot = st === "ok" ? "✅" : (st === "fail" ? "❌" : "⚪");
+    pill.innerHTML = '<span class="status-' + st + '">' + dot + " " + esc(m) + '</span><span class="del" data-m="' + esc(m) + '">×</span>';
+    box.appendChild(pill);
+  });
+  renderParticipants();
+  save();
+}
+function renderParticipants(){
+  var box = $("confParticipants"); box.innerHTML = "";
+  state.conferenceModels.forEach(function(p, i){
+    var pill = document.createElement("div"); pill.className = "model-pill";
+    pill.innerHTML = esc(p.role) + " (" + esc(p.model) + ")<span class='del' data-i='" + i + "'>×</span>";
+    box.appendChild(pill);
+  });
+}
+function appendChat(who, text, cls){
+  var d = $("chatDisplay");
+  var div = document.createElement("div"); div.className = cls || "msg-ai";
+  div.innerHTML = "<b>" + esc(who) + ":</b> " + esc(text).replace(/\n/g, "<br>");
+  d.appendChild(div); d.scrollTop = d.scrollHeight;
+}
+function appendConf(who, text){
+  var d = $("confDisplay");
+  var div = document.createElement("div"); div.className = "msg-ai";
+  div.innerHTML = "<b style='color:#a78bfa'>" + esc(who) + ":</b> " + esc(text).replace(/\n/g, "<br>");
+  d.appendChild(div); d.scrollTop = d.scrollHeight;
+}
+function status(msg, color){
+  console.log("[status] " + msg + " (" + (color||"") + ")");
+}
+
+// ---------- API ----------
+function clientHeaders(){
+  return { "Content-Type": "application/json", "Authorization": "Bearer " + state.apiKey };
+}
+async function chatOnce(model, messages){
+  var res = await fetch(state.baseUrl.replace(/\/$/,"") + "/chat/completions", {
+    method: "POST", headers: clientHeaders(),
+    body: JSON.stringify({ model: model, messages: messages, max_tokens: 1024 })
+  });
+  if(!res.ok){
+    var t = await res.text();
+    throw new Error("HTTP " + res.status + ": " + t.slice(0, 300));
+  }
+  var data = await res.json();
+  var usage = data.usage || {};
+  state.totalTokens += (usage.total_tokens || 0); setTokens();
+  return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || "").trim();
+}
+
+// ---------- Chatbot ----------
+async function sendChat(){
+  if(state.busy) return;
+  var txt = $("chatEntry").value.trim(); if(!txt) return;
+  if(!state.apiKey){ switchTab("tab-set"); return alert("ابتدا در تب Settings کلید API را وارد و ذخیره کنید."); }
+  $("chatEntry").value = "";
+  appendChat("You", txt, "msg-user");
+  state.chatHistory.push({role:"user", content:txt});
+  state.busy = true;
+  var model = $("chatModel").value;
+  state.chatModel = model; save();
+  appendChat(model, "...", "msg-ai");
+  try{
+    var reply = await chatOnce(model, state.chatHistory.slice());
+    state.chatHistory.push({role:"assistant", content:reply});
+    var disp = $("chatDisplay");
+    disp.lastChild.innerHTML = "<b>" + esc(model) + ":</b> " + esc(reply).replace(/\n/g, "<br>");
+    disp.scrollTop = disp.scrollHeight;
+  }catch(e){
+    disp.lastChild.innerHTML = "<span style='color:var(--red)'>Error: " + esc(e.message) + "</span>";
+  }
+  state.busy = false;
+}
+
+// ---------- Conference ----------
+async function runConference(topic){
+  if(state.busy) return;
+  if(!state.conferenceModels.length) return alert("هیچ مدلی به کنفرانس اضافه نشده است.");
+  if(!state.apiKey){ switchTab("tab-set"); return alert("ابتدا کلید API را در Settings وارد کنید."); }
+  state.busy = true;
+  appendConf("You (" + state.userRole + ")", topic);
+  state.confContext += "User (" + state.userRole + "): " + topic + "\n";
+  for(var i = 0; i < state.conferenceModels.length; i++){
+    var p = state.conferenceModels[i];
+    appendConf(p.role + " [" + p.model + "]", "...");
+    try{
+      var messages = [
+        {role:"system", content: DEFAULT_PROMPT + "\n\nYour assigned role: " + p.role +
+          "\nOther participants: " + state.conferenceModels.map(function(x){return x.role;}).join(", ") +
+          "\nUser role: " + state.userRole},
+        {role:"user", content: state.confContext + "\nIt is your turn (" + p.role + "). Respond now. Output [SKIP] only if someone else was directly addressed."}
+      ];
+      var reply = await chatOnce(p.model, messages);
+      appendConf(p.role + " [" + p.model + "]", reply);
+      if(reply.trim() !== "[SKIP]") state.confContext += p.role + ": " + reply + "\n";
+    }catch(e){
+      appendConf(p.role + " [" + p.model + "]", "⚠️ Error: " + e.message);
+    }
+  }
+  state.busy = false;
+}
+function sendConf(){
+  var txt = $("confEntry").value.trim(); if(!txt) return;
+  $("confEntry").value = "";
+  runConference(txt);
+}
+
+// ---------- Model management ----------
+async function fetchModels(){
+  if(!state.apiKey) return alert("ابتدا کلید API را ذخیره کنید.");
+  status("Fetching models...");
+  try{
+    var res = await fetch(state.baseUrl.replace(/\/$/,"") + "/models", { headers: clientHeaders() });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    var data = await res.json();
+    var ids = (data.data || []).map(function(m){ return m.id; }).filter(Boolean);
+    if(!ids.length) return alert("سرور مدلی برنگرداند.");
+    var old = state.modelStatus;
+    state.modelList = ids.sort();
+    state.modelStatus = {};
+    state.modelList.forEach(function(m){ state.modelStatus[m] = old[m] || "unknown"; });
+    refreshModelsUI();
+    alert(state.modelList.length + " مدل از سرور دریافت شد.");
+  }catch(e){ alert("خطا در دریافت مدل‌ها: " + e.message); }
+}
+async function testAll(){
+  if(!state.apiKey) return alert("ابتدا کلید API را ذخیره کنید.");
+  for(var i = 0; i < state.modelList.length; i++){
+    var m = state.modelList[i];
+    try{
+      await chatOnce(m, [{role:"user", content:"Reply with OK only."}]);
+      state.modelStatus[m] = "ok";
+    }catch(e){ state.modelStatus[m] = "fail"; }
+    refreshModelsUI();
+  }
+  alert("تست مدل‌ها تمام شد.");
+}
+function deleteFailed(){
+  state.modelList = state.modelList.filter(function(m){ return state.modelStatus[m] !== "fail"; });
+  refreshModelsUI();
+}
+
+// ---------- Tabs & events ----------
+function switchTab(id){
+  document.querySelectorAll(".tab").forEach(function(t){ t.classList.toggle("active", t.id === id); });
+  document.querySelectorAll("nav button").forEach(function(b){ b.classList.toggle("active", b.dataset.tab === id); });
+}
+document.querySelectorAll("nav button").forEach(function(b){
+  b.addEventListener("click", function(){ switchTab(b.dataset.tab); });
+});
+$("chatSend").addEventListener("click", sendChat);
+$("chatEntry").addEventListener("keydown", function(e){ if(e.key === "Enter") sendChat(); });
+$("confSend").addEventListener("click", sendConf);
+$("confEntry").addEventListener("keydown", function(e){ if(e.key === "Enter") sendConf(); });
+$("confAdd").addEventListener("click", function(){
+  var m = $("confModel").value, r = $("confRole").value.trim() || "Participant";
+  if(!m) return;
+  state.conferenceModels.push({model: m, role: r});
+  $("confRole").value = ""; renderParticipants(); save();
+});
+$("confClear").addEventListener("click", function(){ state.conferenceModels = []; renderParticipants(); save(); });
+$("confFetch").addEventListener("click", fetchModels);
+$("setSave").addEventListener("click", function(){
+  state.apiKey = $("setKey").value.trim();
+  state.baseUrl = $("setUrl").value.trim() || state.baseUrl;
+  state.userRole = $("userRole").value.trim() || "User";
+  save(); alert("تنظیمات ذخیره شد.");
+});
+$("setFetch").addEventListener("click", fetchModels);
+$("setTest").addEventListener("click", testAll);
+$("setDelFail").addEventListener("click", deleteFailed);
+$("modelList").addEventListener("click", function(e){
+  if(e.target.classList.contains("del")){
+    var m = e.target.dataset.m;
+    state.modelList = state.modelList.filter(function(x){ return x !== m; });
+    delete state.modelStatus[m];
+    refreshModelsUI();
+  }
+});
+$("confParticipants").addEventListener("click", function(e){
+  if(e.target.classList.contains("del")){
+    var i = parseInt(e.target.dataset.i, 10);
+    state.conferenceModels.splice(i, 1);
+    renderParticipants(); save();
+  }
+});
+
+// ---------- init ----------
+load();
+$("setKey").value = state.apiKey;
+$("setUrl").value = state.baseUrl;
+$("userRole").value = state.userRole;
+refreshModelsUI();
+setTokens();
+if(!state.apiKey) appendChat("System", "برای شروع، در تب ⚙️ Settings کلید API و Base URL را وارد و Save کنید.", "msg-user");
+</script>
+</body>
+</html>
