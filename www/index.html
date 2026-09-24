@@ -23,7 +23,7 @@ nav button.active{color:var(--accent);border-bottom-color:var(--accent);font-wei
 main{flex:1;overflow:hidden;display:flex;}
 .tab{display:none;flex:1;flex-direction:column;overflow:hidden;padding:12px;gap:10px;}
 .tab.active{display:flex;}
-.display{flex:1;background:var(--panel);border-radius:10px;padding:12px;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word;line-height:1.9;font-size:14px;}
+.display{position:relative;flex:1;background:var(--panel);border-radius:10px;padding:12px;overflow-y:auto;white-space:pre-wrap;word-wrap:break-word;line-height:1.9;font-size:14px;}
 .entry-row{display:flex;gap:8px;align-items:stretch;}
 input[type=text],input[type=password]{flex:1;background:var(--panel2);border:1px solid #3a4152;border-radius:8px;color:var(--text);padding:12px;font-size:15px;font-family:inherit;min-width:0;}
 input:focus{outline:1px solid var(--accent);}
@@ -44,6 +44,10 @@ select{background:var(--panel2);color:var(--text);border:1px solid #3a4152;borde
 .status-ok{color:var(--green)} .status-fail{color:var(--red)} .status-unknown{color:var(--muted)}
 #confParticipants{min-height:44px;padding:6px;}
 .hint{font-size:12px;color:var(--muted);}
+
+.newMsgBadge{position:absolute;bottom:14px;right:50%;transform:translateX(50%);background:var(--accent);color:#fff;
+  padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.5);z-index:50;display:none;}
+.display{position:relative;}
 </style>
 </head>
 <body>
@@ -58,7 +62,7 @@ select{background:var(--panel2);color:var(--text);border:1px solid #3a4152;borde
       <div class="row" style="margin:0">
         <select id="chatModel"></select>
       </div>
-      <div class="display" id="chatDisplay">مدل را انتخاب کنید و پیام بفرستید...</div>
+      <div class="display" id="chatDisplay">مدل را انتخاب کنید و پیام بفرستید...<div class="newMsgBadge" id="chatBadge">پیام جدید ⬇</div></div>
       <div class="entry-row">
         <input type="text" id="chatEntry" placeholder="پیام خود را بنویسید...">
         <button class="btn" id="chatSend">Send</button>
@@ -81,7 +85,7 @@ select{background:var(--panel2);color:var(--text);border:1px solid #3a4152;borde
           <button class="btn small danger" id="confClear">Clear All</button>
         </div>
       </div>
-      <div class="display" id="confDisplay">موضوع کنفرانس را ارسال کنید...</div>
+      <div class="display" id="confDisplay">موضوع کنفرانس را ارسال کنید...<div class="newMsgBadge" id="confBadge">پیام جدید ⬇</div></div>
       <div class="entry-row">
         <input type="text" id="confEntry" placeholder="موضوع یا پیام خود را بنویسید...">
         <button class="btn" id="confSend">Send</button>
@@ -113,7 +117,7 @@ select{background:var(--panel2);color:var(--text);border:1px solid #3a4152;borde
   </nav>
 </div>
 <script>
-// ============================ Bobbit Roundtable Web (Capacitor) ============================
+// ============================ Bobbit Roundtable Web v2.3.0 (Capacitor) ============================
 var DEFAULT_MODEL_LIST = [
   "claude-haiku-4-5-20251001","claude-opus-4-8","claude-opus-5","claude-sonnet-4-6","claude-sonnet-5",
   "deepseek-v4-flash-0731","deepseek-v4-pro-0813","deepseek-v4.1-flash",
@@ -202,17 +206,25 @@ function renderParticipants(){
     box.appendChild(pill);
   });
 }
+function isNearBottom(d){ return d.scrollHeight - d.scrollTop - d.clientHeight < 60; }
+function smartAppend(d, badgeId, div){
+  var stick = isNearBottom(d);
+  d.appendChild(div);
+  if(stick){ d.scrollTop = d.scrollHeight; $(badgeId).style.display = "none"; }
+  else { $(badgeId).style.display = "block"; }
+}
+function hideBadge(badgeId){ $(badgeId).style.display = "none"; }
 function appendChat(who, text, cls){
   var d = $("chatDisplay");
   var div = document.createElement("div"); div.className = cls || "msg-ai";
   div.innerHTML = "<b>" + esc(who) + ":</b> " + esc(text).replace(/\n/g, "<br>");
-  d.appendChild(div); d.scrollTop = d.scrollHeight;
+  smartAppend(d, "chatBadge", div);
 }
 function appendConf(who, text){
   var d = $("confDisplay");
   var div = document.createElement("div"); div.className = "msg-ai";
   div.innerHTML = "<b style='color:#a78bfa'>" + esc(who) + ":</b> " + esc(text).replace(/\n/g, "<br>");
-  d.appendChild(div); d.scrollTop = d.scrollHeight;
+  smartAppend(d, "confBadge", div);
 }
 function status(msg, color){
   console.log("[status] " + msg + " (" + (color||"") + ")");
@@ -254,7 +266,7 @@ async function sendChat(){
     state.chatHistory.push({role:"assistant", content:reply});
     var disp = $("chatDisplay");
     disp.lastChild.innerHTML = "<b>" + esc(model) + ":</b> " + esc(reply).replace(/\n/g, "<br>");
-    disp.scrollTop = disp.scrollHeight;
+    if(isNearBottom(disp)) disp.scrollTop = disp.scrollHeight; else $("chatBadge").style.display = "block";
   }catch(e){
     disp.lastChild.innerHTML = "<span style='color:var(--red)'>Error: " + esc(e.message) + "</span>";
   }
@@ -328,6 +340,11 @@ function deleteFailed(){
   state.modelList = state.modelList.filter(function(m){ return state.modelStatus[m] !== "fail"; });
   refreshModelsUI();
 }
+
+$("chatBadge").addEventListener("click", function(){ var d=$("chatDisplay"); d.scrollTop=d.scrollHeight; hideBadge("chatBadge"); });
+$("confBadge").addEventListener("click", function(){ var d=$("confDisplay"); d.scrollTop=d.scrollHeight; hideBadge("confBadge"); });
+$("chatDisplay").addEventListener("scroll", function(){ if(isNearBottom($("chatDisplay"))) hideBadge("chatBadge"); });
+$("confDisplay").addEventListener("scroll", function(){ if(isNearBottom($("confDisplay"))) hideBadge("confBadge"); });
 
 // ---------- Tabs & events ----------
 function switchTab(id){

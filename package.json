@@ -1,6 +1,6 @@
 {
   "name": "bobbit-roundtable-android",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Bobbit Roundtable - multi-model AI chat & conference app (Capacitor Android)",
   "main": "index.js",
   "scripts": {
