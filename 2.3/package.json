@@ -1,0 +1,29 @@
+{
+  "name": "bobbit-roundtable-android",
+  "version": "2.3.0",
+  "description": "Bobbit Roundtable - multi-model AI chat & conference app (Capacitor Android)",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx cap open android",
+    "sync": "npx cap sync android",
+    "add:android": "npx cap add android",
+    "open:android": "npx cap open android",
+    "apk:debug": "cd android && ./gradlew assembleDebug"
+  },
+  "keywords": [
+    "capacitor",
+    "android",
+    "ai",
+    "chat",
+    "conference"
+  ],
+  "author": "Bobbit",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}
