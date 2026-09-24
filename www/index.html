@@ -96,7 +96,7 @@ select{background:var(--panel2);color:var(--text);border:1px solid #3a4152;borde
       <div class="card">
         <h3>API Configuration</h3>
         <div class="row"><label>API Key</label><input type="password" id="setKey" placeholder="sk-..."></div>
-        <div class="row"><label>Base URL</label><input type="text" id="setUrl" value="https://llm.simplellms.com/v1"></div>
+        <div class="row"><label>Base URL</label><input type="text" id="setUrl" value="https://llm.simplellms.com"></div>
         <div class="row" style="margin:0">
           <button class="btn" id="setSave">Save Settings</button>
           <button class="btn" id="setFetch">Fetch Models</button>
@@ -139,7 +139,7 @@ var DEFAULT_PROMPT = "You are participating in a multi-agent conference.\n" +
 "Respond in the same language the conversation is currently using (Persian or English).";
 
 var state = {
-  apiKey: "", baseUrl: "https://llm.simplellms.com/v1",
+  apiKey: "", baseUrl: "https://llm.simplellms.com",
   modelList: DEFAULT_MODEL_LIST.slice(),
   modelStatus: {},
   chatModel: "grok-4.6",
